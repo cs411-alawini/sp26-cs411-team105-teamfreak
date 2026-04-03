@@ -114,4 +114,56 @@ This advanced query computes the total amount owed by each user within each circ
  It joins the Users, Expense_Split, Expense, and Circle tables to associate users
  with their expense splits and corresponding circles. The query then aggregates the
  Amount_Owed values using SUM and groups the results by user and circle to produce
- the total owed per user per circle.
+ the total owed per user per circle. In the future this will be one of our most commonly
+ used queries as this information is very relevant for each individual user.
+
+
+SELECT 
+    es1.User_Id AS Debtor,
+    es2.User_Id AS Creditor,
+    e.Circle_Id,
+    SUM(es1.Amount_Owed - es2.Amount_Owed) AS Net_Balance
+FROM Expense e
+JOIN Expense_Split es1 
+    ON e.Expense_Id = es1.Expense_Id
+JOIN Expense_Split es2 
+    ON e.Expense_Id = es2.Expense_Id
+WHERE es1.User_Id <> es2.User_Id
+GROUP BY es1.User_Id, es2.User_Id, e.Circle_Id
+HAVING Net_Balance > 0
+ORDER BY Net_Balance DESC
+LIMIT 15;
+
+This advanced query computes the net balance between pairs of users within each circle to 
+determine who owes whom. It joins the Expense table with the Expense_Split table twice to 
+compare the amounts owed by different users participating in the same expense. The query aggregates 
+the differences in owed amounts using SUM and groups the results by debtor, creditor, and circle.
+The HAVING clause filters to include only positive balances, indicating outstanding debts between users. 
+This query can be used in the future to power features such as real-time balance tracking and simplified 
+settlement suggestions, helping users minimize the number of transactions needed to settle debts.
+
+
+SELECT 
+    u.User_Id,
+    u.Name,
+    COUNT(e.Expense_Id) AS Overdue_Expenses
+FROM Users u
+JOIN Expense e 
+    ON u.User_Id = e.User_Id
+WHERE e.Status = 'Overdue'
+   OR e.Paid_Date > (
+        SELECT AVG(e2.Paid_Date)
+        FROM Expense e2
+        WHERE e2.User_Id = u.User_Id
+    )
+GROUP BY u.User_Id, u.Name
+ORDER BY Overdue_Expenses DESC
+LIMIT 15;
+
+This advanced query identifies users with overdue or relatively late payments to support reliability 
+analysis. It joins the Users and Expense tables to associate each user with their recorded expenses. 
+The query counts overdue expenses and uses a correlated subquery to compare each payment date against 
+the user’s average payment date. The results are aggregated using COUNT and grouped by user, producing 
+a list of users ranked by the number of overdue or late payments. This query can be used in the future 
+to inform a user reliability scoring system, helping predict repayment behavior and build trust within 
+social circles.
