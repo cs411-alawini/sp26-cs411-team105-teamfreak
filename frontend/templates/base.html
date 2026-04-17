@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} | TeamFreak</title>
+    <style>
+        :root {
+            --bg: #f7f3ed;
+            --phone: #111111;
+            --surface: #fffaf3;
+            --surface-strong: #ffffff;
+            --surface-soft: #ffe6cf;
+            --surface-tint: #fff0e2;
+            --ink: #121212;
+            --muted: #6f6258;
+            --accent: #f47c20;
+            --accent-strong: #c85e0c;
+            --accent-soft: #ffe1c6;
+            --gold: #f3a245;
+            --border: #e6d3bf;
+            --shadow: 0 24px 60px rgba(28, 20, 11, 0.16);
+            --danger-bg: #ffe7e1;
+            --danger-text: #8a2d1d;
+            --success-bg: #e5f8ee;
+            --success-text: #165937;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Montserrat", "Avenir Next", "Segoe UI", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(244, 124, 32, 0.16), transparent 25%),
+                radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.08), transparent 24%),
+                linear-gradient(180deg, #fbf7f1 0%, #f1e6d9 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem 0.75rem;
+        }
+
+        .phone-frame {
+            width: min(420px, 100%);
+            background: var(--phone);
+            border-radius: 38px;
+            padding: 12px;
+            box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+        }
+
+        .phone-screen {
+            position: relative;
+            min-height: 800px;
+            height: 800px;
+            border-radius: 28px;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(255, 253, 249, 0.99), rgba(247, 239, 230, 0.99));
+        }
+
+        .notch {
+            width: 34%;
+            height: 28px;
+            background: #0b0c0e;
+            border-radius: 0 0 18px 18px;
+            margin: 0 auto;
+        }
+
+        .page-shell {
+            padding: 0.95rem 1rem 6.9rem;
+            height: calc(100% - 28px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(244, 124, 32, 0.5) transparent;
+        }
+
+        .page-shell::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .page-shell::-webkit-scrollbar-thumb {
+            background: rgba(244, 124, 32, 0.5);
+            border-radius: 999px;
+        }
+
+        .page-shell::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.45rem 0.1rem 0.9rem;
+            color: var(--muted);
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .hero {
+            background: linear-gradient(155deg, rgba(244, 124, 32, 0.98), rgba(200, 94, 12, 0.95));
+            color: white;
+            border-radius: 28px;
+            padding: 1.3rem;
+            box-shadow: 0 18px 28px rgba(200, 94, 12, 0.24);
+            margin-bottom: 0.9rem;
+        }
+
+        .hero-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .hero h1 {
+            margin: 0 0 0.35rem;
+            font-size: 1.95rem;
+            line-height: 1.02;
+            letter-spacing: -0.035em;
+        }
+
+        .hero-action,
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            font-weight: 700;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: transform 0.16s ease, background-color 0.16s ease;
+        }
+
+        .hero-action {
+            background: rgba(17, 17, 17, 0.14);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.78rem 1rem;
+            white-space: nowrap;
+            font-size: 0.88rem;
+        }
+
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            margin-top: 1rem;
+        }
+
+        .hero-pill {
+            padding: 0.42rem 0.74rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 0.83rem;
+            font-weight: 700;
+        }
+
+        .section-title {
+            margin: 1rem 0 0.65rem;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            font-weight: 800;
+        }
+
+        .subtabs {
+            display: flex;
+            gap: 0.55rem;
+            overflow-x: auto;
+            margin-bottom: 0.4rem;
+            scrollbar-width: none;
+        }
+
+        .subtabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .subtab {
+            white-space: nowrap;
+            text-decoration: none;
+            border-radius: 999px;
+            padding: 0.64rem 0.9rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--muted);
+            background: var(--surface-soft);
+        }
+
+        .subtab.active {
+            background: var(--accent-soft);
+            color: var(--accent-strong);
+        }
+
+        .card,
+        .table-card,
+        .form-card {
+            margin-top: 1rem;
+            background: rgba(255, 250, 243, 0.97);
+            border: 1px solid rgba(230, 211, 191, 0.85);
+            border-radius: 24px;
+            box-shadow: 0 12px 30px rgba(104, 74, 40, 0.08);
+        }
+
+        .card,
+        .table-card,
+        .form-card {
+            padding: 1.1rem;
+        }
+
+        .card h2,
+        .table-card h2,
+        .form-card h2 {
+            margin: 0 0 0.45rem;
+            font-size: 1.08rem;
+            letter-spacing: -0.02em;
+        }
+
+        .card p,
+        .table-card p,
+        .form-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.94rem;
+        }
+
+        .cards-stack,
+        .stats-grid,
+        .detail-grid {
+            display: grid;
+            gap: 0.9rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .circle-card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            background: linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(255, 242, 228, 0.96));
+            border: 1px solid rgba(230, 211, 191, 0.85);
+            border-radius: 24px;
+            padding: 1rem;
+            box-shadow: 0 12px 30px rgba(104, 74, 40, 0.08);
+        }
+
+        .circle-card-header,
+        .row-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .circle-card h2 {
+            margin: 0 0 0.25rem;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+        }
+
+        .circle-meta {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        .balance-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .balance-box,
+        .stat-box {
+            padding: 0.88rem;
+            border-radius: 18px;
+            background: var(--surface);
+            border: 1px solid rgba(217, 207, 191, 0.8);
+        }
+
+        .balance-box.positive {
+            background: var(--surface-tint);
+        }
+
+        .value {
+            display: block;
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.15rem;
+        }
+
+        .label {
+            color: var(--muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.32rem 0.65rem;
+            border-radius: 999px;
+            background: #ffe3c5;
+            color: #b0550d;
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
+        .list-rows {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+
+        .scroll-panel {
+            max-height: 260px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(244, 124, 32, 0.5) transparent;
+        }
+
+        .scroll-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .scroll-panel::-webkit-scrollbar-thumb {
+            background: rgba(244, 124, 32, 0.5);
+            border-radius: 999px;
+        }
+
+        .scroll-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .list-row {
+            padding: 0.9rem;
+            border-radius: 18px;
+            background: var(--surface-strong);
+            border: 1px solid rgba(230, 211, 191, 0.8);
+        }
+
+        .list-row strong {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .tiny {
+            font-size: 0.84rem;
+            color: var(--muted);
+        }
+
+        .flash-list {
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0 0;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .flash {
+            padding: 0.95rem 1rem;
+            border-radius: 18px;
+            border: 1px solid transparent;
+            font-size: 0.92rem;
+        }
+
+        .flash.error {
+            background: var(--danger-bg);
+            color: var(--danger-text);
+            border-color: rgba(138, 45, 29, 0.16);
+        }
+
+        .flash.success {
+            background: var(--success-bg);
+            color: var(--success-text);
+            border-color: rgba(22, 89, 55, 0.16);
+        }
+
+        form {
+            display: grid;
+            gap: 0.95rem;
+        }
+
+        label {
+            display: grid;
+            gap: 0.42rem;
+            font-weight: 700;
+            font-size: 0.92rem;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 0.82rem 0.92rem;
+            background: var(--surface-strong);
+            color: var(--ink);
+            font: inherit;
+        }
+
+        textarea {
+            min-height: 110px;
+            resize: vertical;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 0.7rem;
+            flex-wrap: wrap;
+        }
+
+        .button {
+            padding: 0.8rem 1.08rem;
+            border: 1px solid transparent;
+        }
+
+        .button.primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .button.secondary {
+            background: var(--surface);
+            color: var(--ink);
+            border-color: var(--border);
+        }
+
+        .button:hover,
+        .hero-action:hover,
+        .circle-card:hover,
+        .bottom-tab:hover {
+            transform: translateY(-1px);
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            margin-top: 0.75rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 620px;
+            font-size: 0.9rem;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 0.8rem 0.65rem;
+            border-bottom: 1px solid rgba(217, 207, 191, 0.75);
+            vertical-align: top;
+        }
+
+        th {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .empty {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 18px;
+            border: 1px dashed var(--border);
+            background: rgba(255, 249, 240, 0.8);
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .bottom-nav {
+            position: absolute;
+            left: 1rem;
+            right: 1rem;
+            bottom: 1rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.6rem;
+            padding: 0.7rem;
+            background: rgba(17, 17, 17, 0.96);
+            border-radius: 24px;
+            box-shadow: 0 18px 30px rgba(10, 10, 10, 0.22);
+        }
+
+        .bottom-tab {
+            min-height: 58px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.18rem;
+            border-radius: 18px;
+            color: rgba(255, 255, 255, 0.76);
+            text-decoration: none;
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
+        .bottom-tab strong {
+            font-size: 0.88rem;
+            letter-spacing: -0.01em;
+        }
+
+        .bottom-tab.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 0;
+            }
+
+            .phone-frame {
+                width: 100%;
+                border-radius: 0;
+                padding: 0;
+                background: transparent;
+                box-shadow: none;
+            }
+
+            .phone-screen {
+                min-height: 100vh;
+                height: 100vh;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <main class="phone-screen">
+            <div class="notch"></div>
+            <div class="page-shell">
+                <div class="status-row">
+                    <span>TeamFreak Demo</span>
+                    <span>User {{ current_user_id }}</span>
+                </div>
+
+                <section class="hero">
+                    <div class="hero-top">
+                        <div>
+                            <h1>{{ title }}</h1>
+                        </div>
+                        {% if hero_action %}
+                            <a class="hero-action" href="{{ hero_action.href }}">{{ hero_action.label }}</a>
+                        {% endif %}
+                    </div>
+                    {% if hero_pills %}
+                        <div class="hero-meta">
+                            {% for pill in hero_pills %}
+                                <span class="hero-pill">{{ pill }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </section>
+
+                {% if subtabs %}
+                    <div class="section-title">{{ active_main_label }}</div>
+                    <nav class="subtabs">
+                        {% for subtab in subtabs %}
+                            <a class="subtab {% if subtab.key == active_subtab %}active{% endif %}" href="{{ subtab.href }}">
+                                {{ subtab.label }}
+                            </a>
+                        {% endfor %}
+                    </nav>
+                {% endif %}
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <ul class="flash-list">
+                            {% for category, message in messages %}
+                                <li class="flash {{ category }}">{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
+
+            <nav class="bottom-nav">
+                {% for tab in main_tabs %}
+                    <a class="bottom-tab {% if tab.key == active_main %}active{% endif %}" href="{{ tab.href }}">
+                        <strong>{{ tab.label }}</strong>
+                        <span>{{ tab.caption }}</span>
+                    </a>
+                {% endfor %}
+            </nav>
+        </main>
+    </div>
+</body>
+</html>

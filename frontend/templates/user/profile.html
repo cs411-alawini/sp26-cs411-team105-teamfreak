@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+    {% if user %}
+        <section class="stats-grid">
+            <article class="stat-box">
+                <span class="value">{{ summary.Active_Circles or 0 }}</span>
+                <span class="label">Active Circles</span>
+            </article>
+            <article class="stat-box">
+                <span class="value">${{ summary.Total_You_Owe | money }}</span>
+                <span class="label">You Owe</span>
+            </article>
+            <article class="stat-box">
+                <span class="value">${{ owed_to_user.Owed_To_You | money }}</span>
+                <span class="label">Owed To You</span>
+            </article>
+            <article class="stat-box">
+                <span class="value">{{ user.Date_Joined }}</span>
+                <span class="label">Joined</span>
+            </article>
+        </section>
+
+        <section class="form-card">
+            <h2>Your Information</h2>
+            <p>This right tab is your profile home and edit screen.</p>
+            <form method="post">
+                <label>
+                    Name *
+                    <input type="text" name="name" value="{{ user.Name }}" required>
+                </label>
+                <label>
+                    Email *
+                    <input type="email" name="email" value="{{ user.Email }}" required>
+                </label>
+                <label>
+                    Password Hash
+                    <input type="text" name="password_hash" value="{{ user.Password_Hash }}">
+                </label>
+                <div class="button-row">
+                    <button class="button primary" type="submit">Save Profile</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="table-card">
+            <h2>Recent Expense-Payment Links</h2>
+            {% if recent_links %}
+                <div class="list-rows">
+                    {% for row in recent_links %}
+                        <div class="list-row">
+                            <strong>Expense {{ row.Expense_Id }} linked to Payment {{ row.Payment_Id }}</strong>
+                            <div class="tiny">${{ row.Amount | money }} on {{ row.Payment_Date }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty">No recent expense-payment links were returned.</div>
+            {% endif %}
+        </section>
+    {% else %}
+        <div class="empty">The current user could not be loaded.</div>
+    {% endif %}
+{% endblock %}
