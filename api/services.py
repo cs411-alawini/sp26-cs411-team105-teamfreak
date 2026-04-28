@@ -98,46 +98,6 @@ def insert_payment(circle_id, form_data, user_id):
         (expense_id, payment_id),
     )
 
-    _update_rank(user_id, expense_id)
-
-
-def _update_rank(user_id, expense_id):
-    expense = fetch_one(
-        "SELECT Creation_Date FROM Expense WHERE Expense_Id = %s",
-        (expense_id,),
-    )
-    split = fetch_one(
-        "SELECT Amount_Owed FROM Expense_Split WHERE Expense_Id = %s AND User_Id = %s",
-        (expense_id, user_id),
-    )
-    user = fetch_one(
-        "SELECT `Rank` FROM Users WHERE User_Id = %s",
-        (user_id,),
-    )
-
-    if not expense or not split or not user:
-        return
-
-    amount_owed = Decimal(split["Amount_Owed"])
-    allowed_days = max(1.0, float(amount_owed) / 10.0)
-
-    creation_date = expense["Creation_Date"]
-    days_taken = (date.today() - creation_date).days
-
-    # positive = paid early, 0 = on time, negative = paid late
-    days_diff = allowed_days - days_taken
-    ratio = days_diff / allowed_days
-    delta = max(-10, min(10, round(ratio * 10)))
-
-    current_rank = int(user["Rank"])
-    new_rank = max(1, min(100, current_rank + delta))
-
-    execute_write(
-        "UPDATE Users SET `Rank` = %s WHERE User_Id = %s",
-        (new_rank, user_id),
-    )
-
-
 def settle_all(circle_id):
     balances = get_circle_balance_rows(circle_id)
     payment_date = date.today().isoformat()
@@ -162,7 +122,6 @@ def settle_all(circle_id):
             "INSERT INTO Expense_Payment (Expense_Id, Payment_Id) VALUES (%s, %s)",
             (expense_id, payment_id),
         )
-        _update_rank(debtor_id, expense_id)
 
 
 def insert_expense(form_data, user_id):
