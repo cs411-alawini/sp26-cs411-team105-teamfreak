@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign In | TeamFreak</title>
+    <style>
+        :root {
+            --bg: #f7f3ed;
+            --phone: #111111;
+            --surface: #fffaf3;
+            --surface-strong: #ffffff;
+            --surface-soft: #ffe6cf;
+            --ink: #121212;
+            --muted: #6f6258;
+            --accent: #f47c20;
+            --accent-strong: #c85e0c;
+            --accent-soft: #ffe1c6;
+            --border: #e6d3bf;
+            --danger-bg: #ffe7e1;
+            --danger-text: #8a2d1d;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Montserrat", "Avenir Next", "Segoe UI", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(244, 124, 32, 0.16), transparent 25%),
+                radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.08), transparent 24%),
+                linear-gradient(180deg, #fbf7f1 0%, #f1e6d9 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem 0.75rem;
+        }
+
+        .phone-frame {
+            width: min(420px, 100%);
+            background: var(--phone);
+            border-radius: 38px;
+            padding: 12px;
+            box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+        }
+
+        .phone-screen {
+            position: relative;
+            min-height: 600px;
+            border-radius: 28px;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(255, 253, 249, 0.99), rgba(247, 239, 230, 0.99));
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notch {
+            width: 34%;
+            height: 28px;
+            background: #0b0c0e;
+            border-radius: 0 0 18px 18px;
+            margin: 0 auto;
+            flex-shrink: 0;
+        }
+
+        .login-shell {
+            padding: 1.5rem 1.25rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+            flex: 1;
+        }
+
+        .brand {
+            background: linear-gradient(155deg, rgba(244, 124, 32, 0.98), rgba(200, 94, 12, 0.95));
+            border-radius: 24px;
+            padding: 1.5rem 1.3rem 1.3rem;
+            color: white;
+            box-shadow: 0 18px 28px rgba(200, 94, 12, 0.24);
+        }
+
+        .brand-label {
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            opacity: 0.8;
+            margin-bottom: 0.3rem;
+        }
+
+        .brand h1 {
+            margin: 0 0 0.25rem;
+            font-size: 2rem;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            font-weight: 900;
+        }
+
+        .brand p {
+            margin: 0;
+            font-size: 0.88rem;
+            opacity: 0.85;
+            font-weight: 600;
+        }
+
+        .flash {
+            border-radius: 14px;
+            padding: 0.75rem 1rem;
+            font-size: 0.86rem;
+            font-weight: 700;
+        }
+
+        .flash.error {
+            background: var(--danger-bg);
+            color: var(--danger-text);
+        }
+
+        .card {
+            background: var(--surface-strong);
+            border-radius: 20px;
+            border: 1.5px solid var(--border);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        .card-title {
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin: 0;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--muted);
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 0.7rem 0.85rem;
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface);
+            font-family: inherit;
+            font-size: 0.95rem;
+            color: var(--ink);
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.85rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            letter-spacing: -0.01em;
+            transition: opacity 0.15s;
+        }
+
+        .btn-primary:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+<div class="phone-frame">
+    <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="login-shell">
+            <div class="brand">
+                <div class="brand-label">Welcome to</div>
+                <h1>TeamFreak</h1>
+                <p>Track shared expenses &amp; settle up</p>
+            </div>
+
+            {% for message in get_flashed_messages(with_categories=true) %}
+            <div class="flash {{ message[0] }}">{{ message[1] }}</div>
+            {% endfor %}
+
+            <div class="card">
+                <p class="card-title">Sign in to your account</p>
+                <form method="post" action="{{ url_for('auth.login') }}">
+                    <div class="field" style="margin-bottom: 0.75rem;">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" required
+                               value="{{ request.form.get('email', '') }}"
+                               placeholder="you@example.com" autocomplete="email">
+                    </div>
+                    <div class="field" style="margin-bottom: 1.1rem;">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required
+                               placeholder="••••••••" autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn-primary">Sign In</button>
+                </form>
+            </div>
+
+            <p style="text-align: center; font-size: 0.85rem; color: var(--muted); margin: 0;">
+                No account?
+                <a href="{{ url_for('auth.register') }}" style="color: var(--accent-strong); font-weight: 700; text-decoration: none;">Create one</a>
+            </p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

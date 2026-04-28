@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="table-card">
+        <h2>Make Payment</h2>
+        <p>Record a payment inside this circle and link it directly to the expense it settles.</p>
+        {% if owes_summary %}
+            <div class="list-rows">
+                {% for item in owes_summary %}
+                    <div class="list-row">
+                        <strong>You owe {{ item.receiver_name }}</strong>
+                        <div class="tiny">${{ item.amount | money }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <form method="post" style="margin-top: 1rem;">
+                <label>
+                    Send To *
+                    <select name="receiver_id" id="receiver-select" required>
+                        <option value="">Select receiver</option>
+                        {% for item in owes_summary %}
+                            <option value="{{ item.receiver_id }}">{{ item.receiver_name }} (${{ item.amount | money }})</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    Linked Expense *
+                    <select name="expense_id" id="expense-select" required>
+                        <option value="">Select expense</option>
+                        {% for expense in eligible_expenses %}
+                            <option
+                                value="{{ expense.expense_id }}"
+                                data-receiver-id="{{ expense.receiver_id }}"
+                                data-remaining="{{ expense.remaining_balance | money }}"
+                            >
+                                Expense {{ expense.expense_id }} | {{ expense.receiver_name }} | ${{ expense.remaining_balance | money }} remaining | {{ expense.description }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    Amount *
+                    <input type="number" name="amount" id="payment-amount" step="0.01" min="0.01" placeholder="0.00" required>
+                </label>
+                <label>
+                    Description
+                    <textarea name="description" placeholder="Dinner repayment, rent share, groceries..."></textarea>
+                </label>
+                <div class="button-row">
+                    <button class="button primary" type="submit">Record Payment</button>
+                </div>
+            </form>
+        {% else %}
+            <div class="empty">You do not currently owe anyone in this circle.</div>
+        {% endif %}
+    </section>
+
+    <section class="table-card">
+        <h2>Settlement Suggestions</h2>
+        <p>These are simplified payment suggestions inside the circle that reduce unnecessary back-and-forth payments.</p>
+        {% if settlement_suggestions %}
+            <div class="list-rows">
+                {% for suggestion in settlement_suggestions %}
+                    <div class="list-row">
+                        <strong>{{ suggestion.from_name }} can pay {{ suggestion.to_name }}</strong>
+                        <div class="tiny">${{ suggestion.amount | money }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty">No simplified settlement suggestions are needed right now.</div>
+        {% endif %}
+    </section>
+
+    <section class="stats-grid">
+        <article class="stat-box">
+            <span class="value">${{ summary.Total_Expenses | money }}</span>
+            <span class="label">Total Expenses</span>
+        </article>
+        <article class="stat-box">
+            <span class="value">{{ summary.Expense_Count or 0 }}</span>
+            <span class="label">Expenses Logged</span>
+        </article>
+        <article class="stat-box">
+            <span class="value">${{ summary.You_Owe | money }}</span>
+            <span class="label">You Owe</span>
+        </article>
+        <article class="stat-box">
+            <span class="value">${{ summary.Owed_To_You | money }}</span>
+            <span class="label">Owed To You</span>
+        </article>
+    </section>
+
+    <section class="table-card">
+        <h2>Circle Overview</h2>
+        <div class="list-rows">
+            <div class="list-row">
+                <strong>Creator</strong>
+                <div class="tiny">{{ circle.Creator_Name }} ({{ circle.Creator_Email }})</div>
+            </div>
+            <div class="list-row">
+                <strong>Created On</strong>
+                <div class="tiny">{{ circle.Creation_Date }}</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="table-card">
+        <h2>Members</h2>
+        {% if members %}
+            <div class="list-rows">
+                {% for member in members %}
+                    {% set rank = member.Rank | int %}
+                    {% if rank >= 86 %}
+                        {% set rank_color = "#b8860b" %}
+                        {% set rank_bg = "#fff8e1" %}
+                    {% elif rank >= 61 %}
+                        {% set rank_color = "#165937" %}
+                        {% set rank_bg = "#e5f8ee" %}
+                    {% elif rank >= 31 %}
+                        {% set rank_color = "#c85e0c" %}
+                        {% set rank_bg = "#ffe1c6" %}
+                    {% else %}
+                        {% set rank_color = "#8a2d1d" %}
+                        {% set rank_bg = "#ffe7e1" %}
+                    {% endif %}
+                    <div class="list-row">
+                        <div class="row-between">
+                            <div>
+                                <strong>{{ member.Name }}</strong>
+                                <div class="tiny">{{ member.Email }}</div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:0.4rem;">
+                                <span style="
+                                    background: {{ rank_bg }};
+                                    color: {{ rank_color }};
+                                    font-size: 0.78rem;
+                                    font-weight: 800;
+                                    padding: 0.25rem 0.55rem;
+                                    border-radius: 999px;
+                                    letter-spacing: 0.02em;
+                                    white-space: nowrap;
+                                ">&#9733; {{ rank }}</span>
+                                <span class="tag">{{ member.Status }}</span>
+                            </div>
+                        </div>
+                        <div class="tiny">Role: {{ member.Role }}{% if member.Date_Joined %} | Joined: {{ member.Date_Joined }}{% endif %}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty">No circle members were returned.</div>
+        {% endif %}
+    </section>
+
+    <section class="table-card">
+        <h2>Expenses</h2>
+        {% if expenses %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Expense ID</th>
+                            <th>Creator</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Split Type</th>
+                            <th>Created</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in expenses %}
+                            <tr>
+                                <td>{{ expense.Expense_Id }}</td>
+                                <td>{{ expense.Created_By }}</td>
+                                <td>${{ expense.Amount | money }}</td>
+                                <td>{{ expense.Status }}</td>
+                                <td>{{ expense.Split_Type }}</td>
+                                <td>{{ expense.Creation_Date }}</td>
+                                <td>{{ expense.Description or "No description" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty">No expenses were returned for this circle.</div>
+        {% endif %}
+    </section>
+
+    <section class="table-card">
+        <h2>Expense Splits</h2>
+        {% if splits %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Expense ID</th>
+                            <th>User</th>
+                            <th>Amount Owed</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for split in splits %}
+                            <tr>
+                                <td>{{ split.Expense_Id }}</td>
+                                <td>{{ split.User_Name }}</td>
+                                <td>${{ split.Amount_Owed | money }}</td>
+                                <td>{{ split.Description or "No description" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty">No expense split data was returned.</div>
+        {% endif %}
+    </section>
+
+    <section class="table-card">
+        <h2>Payments</h2>
+        {% if payments %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Payment ID</th>
+                            <th>Sender</th>
+                            <th>Receiver</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                            <tr>
+                                <td>{{ payment.Payment_Id }}</td>
+                                <td>{{ payment.Sender_Name }}</td>
+                                <td>{{ payment.Receiver_Name }}</td>
+                                <td>${{ payment.Amount | money }}</td>
+                                <td>{{ payment.Payment_Date }}</td>
+                                <td>{{ payment.Description or "No description" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty">No payment records were returned for this circle.</div>
+        {% endif %}
+    </section>
+
+    <script>
+        const receiverSelect = document.getElementById('receiver-select');
+        const expenseSelect = document.getElementById('expense-select');
+        const paymentAmountInput = document.getElementById('payment-amount');
+
+        function syncExpenseOptions() {
+            if (!receiverSelect || !expenseSelect) return;
+            const receiverId = receiverSelect.value;
+            let firstVisibleOption = "";
+
+            Array.from(expenseSelect.options).forEach((option, index) => {
+                if (index === 0) {
+                    option.hidden = false;
+                    return;
+                }
+                const matches = !receiverId || option.dataset.receiverId === receiverId;
+                option.hidden = !matches;
+                if (matches && !firstVisibleOption) {
+                    firstVisibleOption = option.value;
+                }
+            });
+
+            if (expenseSelect.selectedOptions.length && expenseSelect.selectedOptions[0].hidden) {
+                expenseSelect.value = "";
+            }
+        }
+
+        function syncAmountHint() {
+            if (!expenseSelect || !paymentAmountInput) return;
+            const selectedOption = expenseSelect.selectedOptions[0];
+            if (selectedOption && selectedOption.dataset.remaining) {
+                paymentAmountInput.max = selectedOption.dataset.remaining;
+                paymentAmountInput.placeholder = selectedOption.dataset.remaining;
+            } else {
+                paymentAmountInput.removeAttribute('max');
+                paymentAmountInput.placeholder = "0.00";
+            }
+        }
+
+        if (receiverSelect && expenseSelect) {
+            receiverSelect.addEventListener('change', () => {
+                syncExpenseOptions();
+                syncAmountHint();
+            });
+            expenseSelect.addEventListener('change', syncAmountHint);
+            syncExpenseOptions();
+            syncAmountHint();
+        }
+    </script>
+{% endblock %}

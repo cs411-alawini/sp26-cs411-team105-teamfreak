@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+    {% if circles %}
+        <section class="cards-stack">
+            {% for circle in circles %}
+                <a class="circle-card" href="{{ url_for('circles.circle_detail', circle_id=circle.Circle_Id) }}">
+                    <div class="circle-card-header">
+                        <div>
+                            <h2>{{ circle.Circle_Name }}</h2>
+                            <div class="circle-meta">
+                                Created {{ circle.Creation_Date }} by {{ circle.Creator_Name }}
+                            </div>
+                        </div>
+                        <span class="tag">{{ circle.Member_Count }} members</span>
+                    </div>
+                    <div class="balance-grid">
+                        <div class="balance-box">
+                            <span class="value">${{ circle.You_Owe | money }}</span>
+                            <span class="label">You Owe</span>
+                        </div>
+                        <div class="balance-box positive">
+                            <span class="value">${{ circle.Owed_To_You | money }}</span>
+                            <span class="label">Owed To You</span>
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </section>
+    {% else %}
+        <div class="empty">No circles were returned. Create your first one from the button above.</div>
+    {% endif %}
+{% endblock %}
