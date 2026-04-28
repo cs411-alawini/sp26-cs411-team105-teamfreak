@@ -67,6 +67,13 @@
                     </div>
                 {% endfor %}
             </div>
+            <form method="post" action="{{ url_for('circles.settle_all_circle', circle_id=circle.Circle_Id) }}"
+                  style="margin-top: 1rem;"
+                  onsubmit="return confirm('This will settle all outstanding balances in this circle for everyone. Continue?')">
+                <div class="button-row">
+                    <button class="button primary" type="submit">Settle All</button>
+                </div>
+            </form>
         {% else %}
             <div class="empty">No simplified settlement suggestions are needed right now.</div>
         {% endif %}
