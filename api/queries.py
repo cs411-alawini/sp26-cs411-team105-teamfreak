@@ -1,6 +1,5 @@
 from decimal import Decimal
 
-from api.config import CURRENT_USER_ID
 from api.db import fetch_all, fetch_one
 
 
@@ -10,7 +9,7 @@ def format_money(value):
     return f"{Decimal(value):.2f}"
 
 
-def fetch_lookup_data():
+def fetch_lookup_data(user_id):
     circles = fetch_all(
         """
         SELECT Circle_Id, Circle_Name
@@ -24,7 +23,7 @@ def fetch_lookup_data():
         ORDER BY Circle_Name
         """
         ,
-        (CURRENT_USER_ID, CURRENT_USER_ID),
+        (user_id, user_id),
     )
     users = fetch_all(
         """
@@ -36,7 +35,7 @@ def fetch_lookup_data():
     return circles, users
 
 
-def get_circle_participant_choices():
+def get_circle_participant_choices(user_id):
     rows = fetch_all(
         """
         SELECT
@@ -72,7 +71,7 @@ def get_circle_participant_choices():
            )
         ORDER BY Circle_Id, Name
         """,
-        (CURRENT_USER_ID, CURRENT_USER_ID, CURRENT_USER_ID, CURRENT_USER_ID),
+        (user_id, user_id, user_id, user_id),
     )
 
     choices = {}
@@ -147,7 +146,7 @@ def get_circle_balance_rows(circle_id):
     return rows
 
 
-def get_you_owe_summary(circle_id):
+def get_you_owe_summary(circle_id, user_id):
     balances = get_circle_balance_rows(circle_id)
     owes_map = {}
     eligible_expenses = []
@@ -155,7 +154,7 @@ def get_you_owe_summary(circle_id):
     for row in balances:
         if row["Remaining_Balance"] <= 0:
             continue
-        if row["Debtor_Id"] == CURRENT_USER_ID:
+        if row["Debtor_Id"] == user_id:
             creditor_id = row["Creditor_Id"]
             owes_map.setdefault(
                 creditor_id,
@@ -237,18 +236,18 @@ def build_settlement_suggestions(circle_id):
     return suggestions
 
 
-def get_current_user():
+def get_current_user(user_id):
     return fetch_one(
         """
         SELECT User_Id, Name, Email, Password_Hash, Date_Joined
         FROM Users
         WHERE User_Id = %s
         """,
-        (CURRENT_USER_ID,),
+        (user_id,),
     )
 
 
-def get_dashboard_circles():
+def get_dashboard_circles(user_id):
     circles = fetch_all(
         """
         SELECT
@@ -272,25 +271,25 @@ def get_dashboard_circles():
            )
         ORDER BY c.Circle_Name
         """,
-        (CURRENT_USER_ID, CURRENT_USER_ID),
+        (user_id, user_id),
     )
 
     for circle in circles:
-        _, _, balances = get_you_owe_summary(circle["Circle_Id"])
+        _, _, balances = get_you_owe_summary(circle["Circle_Id"], user_id)
         circle["You_Owe"] = sum(
             Decimal(row["Remaining_Balance"])
             for row in balances
-            if row["Debtor_Id"] == CURRENT_USER_ID and row["Creditor_Id"] != CURRENT_USER_ID
+            if row["Debtor_Id"] == user_id and row["Creditor_Id"] != user_id
         )
         circle["Owed_To_You"] = sum(
             Decimal(row["Remaining_Balance"])
             for row in balances
-            if row["Creditor_Id"] == CURRENT_USER_ID and row["Debtor_Id"] != CURRENT_USER_ID
+            if row["Creditor_Id"] == user_id and row["Debtor_Id"] != user_id
     )
     return circles
 
 
-def get_user_balance_summary():
+def get_user_balance_summary(user_id):
     accessible_circles = fetch_all(
         """
         SELECT Circle_Id
@@ -303,23 +302,23 @@ def get_user_balance_summary():
            )
         ORDER BY Circle_Id
         """,
-        (CURRENT_USER_ID, CURRENT_USER_ID),
+        (user_id, user_id),
     )
 
     total_you_owe = Decimal("0.00")
     total_owed_to_you = Decimal("0.00")
 
     for circle in accessible_circles:
-        _, _, balances = get_you_owe_summary(circle["Circle_Id"])
+        _, _, balances = get_you_owe_summary(circle["Circle_Id"], user_id)
         total_you_owe += sum(
             Decimal(row["Remaining_Balance"])
             for row in balances
-            if row["Debtor_Id"] == CURRENT_USER_ID and row["Creditor_Id"] != CURRENT_USER_ID
+            if row["Debtor_Id"] == user_id and row["Creditor_Id"] != user_id
         )
         total_owed_to_you += sum(
             Decimal(row["Remaining_Balance"])
             for row in balances
-            if row["Creditor_Id"] == CURRENT_USER_ID and row["Debtor_Id"] != CURRENT_USER_ID
+            if row["Creditor_Id"] == user_id and row["Debtor_Id"] != user_id
         )
 
     return {
@@ -329,7 +328,7 @@ def get_user_balance_summary():
     }
 
 
-def get_circle_detail(circle_id):
+def get_circle_detail(circle_id, user_id):
     circle = fetch_one(
         """
         SELECT
@@ -351,7 +350,7 @@ def get_circle_detail(circle_id):
                 )
           )
         """,
-        (circle_id, CURRENT_USER_ID, CURRENT_USER_ID),
+        (circle_id, user_id, user_id),
     )
     if not circle:
         return None
@@ -447,7 +446,7 @@ def get_circle_detail(circle_id):
         LEFT JOIN Expense_Split es ON e.Expense_Id = es.Expense_Id
         WHERE c.Circle_Id = %s
         """,
-        (CURRENT_USER_ID, CURRENT_USER_ID, CURRENT_USER_ID, circle_id),
+        (user_id, user_id, user_id, circle_id),
     )
 
     return {

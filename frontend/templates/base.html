@@ -553,8 +553,8 @@
             <div class="notch"></div>
             <div class="page-shell">
                 <div class="status-row">
-                    <span>TeamFreak Demo</span>
-                    <span>User {{ current_user_id }}</span>
+                    <span>TeamFreak</span>
+                    <a href="{{ url_for('auth.logout') }}" style="color: inherit; text-decoration: none;">{{ current_user_name }} &rsaquo; Sign out</a>
                 </div>
 
                 <section class="hero">

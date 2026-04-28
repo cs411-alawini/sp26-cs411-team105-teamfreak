@@ -1,18 +1,22 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from mysql.connector import Error
 
 from api.config import MAIN_TABS
 from api.queries import get_current_user, get_recent_payment_links, get_user_balance_summary
 from api.services import update_user
+from routes.auth import login_required
 
 bp = Blueprint("user", __name__)
 
 
 @bp.route("/user", methods=["GET", "POST"])
+@login_required
 def user_profile():
+    user_id = session["user_id"]
+
     if request.method == "POST":
         try:
-            update_user(request.form)
+            update_user(request.form, user_id)
         except (ValueError, Error) as exc:
             flash(f"Could not update user information: {exc}", "error")
         else:
@@ -20,8 +24,8 @@ def user_profile():
             return redirect(url_for("user.user_profile"))
 
     try:
-        user = get_current_user()
-        summary = get_user_balance_summary()
+        user = get_current_user(user_id)
+        summary = get_user_balance_summary(user_id)
         owed_to_user = {"Owed_To_You": summary["Owed_To_You"]}
         recent_links = get_recent_payment_links()
     except Error as exc:

@@ -1,20 +1,23 @@
 from datetime import date
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from mysql.connector import Error
 
-from api.config import CURRENT_USER_ID, MAIN_TABS, SPLIT_TYPE_OPTIONS
+from api.config import MAIN_TABS, SPLIT_TYPE_OPTIONS
 from api.queries import fetch_lookup_data, get_circle_participant_choices
 from api.services import insert_expense
+from routes.auth import login_required
 
 bp = Blueprint("expenses", __name__)
 
 
 @bp.route("/expenses/new", methods=["GET", "POST"])
+@login_required
 def new_expense():
+    user_id = session["user_id"]
     try:
-        circles, users = fetch_lookup_data()
-        circle_participant_choices = get_circle_participant_choices()
+        circles, users = fetch_lookup_data(user_id)
+        circle_participant_choices = get_circle_participant_choices(user_id)
     except Error as exc:
         circles, users = [], []
         circle_participant_choices = {}
@@ -25,7 +28,7 @@ def new_expense():
 
     if request.method == "POST":
         try:
-            circle_id = insert_expense(request.form)
+            circle_id = insert_expense(request.form, user_id)
         except (ValueError, Error) as exc:
             flash(f"Could not create expense: {exc}", "error")
         else:

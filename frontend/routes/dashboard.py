@@ -1,16 +1,19 @@
-from flask import Blueprint, flash, render_template, url_for
+from flask import Blueprint, flash, render_template, session, url_for
 from mysql.connector import Error
 
 from api.config import MAIN_TABS
 from api.queries import get_dashboard_circles
+from routes.auth import login_required
 
 bp = Blueprint("dashboard", __name__)
 
 
 @bp.route("/")
+@login_required
 def dashboard():
+    user_id = session["user_id"]
     try:
-        circles = get_dashboard_circles()
+        circles = get_dashboard_circles(user_id)
     except Error as exc:
         flash(f"Database error while loading dashboard circles: {exc}", "error")
         circles = []

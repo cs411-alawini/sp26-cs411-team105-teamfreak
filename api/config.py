@@ -1,5 +1,7 @@
+from dotenv import load_dotenv
 import os
 
+load_dotenv()
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "127.0.0.1"),
     "port": int(os.getenv("DB_PORT", "3306")),
@@ -8,7 +10,6 @@ DB_CONFIG = {
     "database": os.getenv("DB_NAME", "teamfreakdata"),
 }
 
-CURRENT_USER_ID = int(os.getenv("CURRENT_USER_ID", "3"))
 STATUS_OPTIONS = ("Active", "Settled", "Overdue", "Canceled")
 SPLIT_TYPE_OPTIONS = ("Even", "Percent", "Custom")
 

@@ -1,9 +1,9 @@
 from decimal import Decimal
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from mysql.connector import Error
 
-from api.config import CURRENT_USER_ID, MAIN_TABS
+from api.config import MAIN_TABS
 from api.queries import (
     build_settlement_suggestions,
     fetch_lookup_data,
@@ -11,21 +11,24 @@ from api.queries import (
     get_you_owe_summary,
 )
 from api.services import insert_circle, insert_payment
+from routes.auth import login_required
 
 bp = Blueprint("circles", __name__)
 
 
 @bp.route("/circles/new", methods=["GET", "POST"])
+@login_required
 def new_circle():
+    user_id = session["user_id"]
     try:
-        _, users = fetch_lookup_data()
+        _, users = fetch_lookup_data(user_id)
     except Error as exc:
         users = []
         flash(f"Database error while loading users: {exc}", "error")
 
     if request.method == "POST":
         try:
-            circle_id = insert_circle(request.form)
+            circle_id = insert_circle(request.form, user_id)
         except (ValueError, Error) as exc:
             flash(f"Could not create circle: {exc}", "error")
         else:
@@ -42,10 +45,13 @@ def new_circle():
 
 
 @bp.route("/circles/<int:circle_id>", methods=["GET", "POST"])
+@login_required
 def circle_detail(circle_id):
+    user_id = session["user_id"]
+
     if request.method == "POST":
         try:
-            insert_payment(circle_id, request.form)
+            insert_payment(circle_id, request.form, user_id)
         except (ValueError, Error) as exc:
             flash(f"Could not record payment: {exc}", "error")
         else:
@@ -53,8 +59,8 @@ def circle_detail(circle_id):
             return redirect(url_for("circles.circle_detail", circle_id=circle_id))
 
     try:
-        detail = get_circle_detail(circle_id)
-        owes_summary, eligible_expenses, raw_balances = get_you_owe_summary(circle_id)
+        detail = get_circle_detail(circle_id, user_id)
+        owes_summary, eligible_expenses, raw_balances = get_you_owe_summary(circle_id, user_id)
         settlement_suggestions = build_settlement_suggestions(circle_id)
     except Error as exc:
         flash(f"Database error while loading circle detail: {exc}", "error")
@@ -77,12 +83,12 @@ def circle_detail(circle_id):
     summary["You_Owe"] = sum(
         Decimal(row["Remaining_Balance"])
         for row in raw_balances
-        if row["Debtor_Id"] == CURRENT_USER_ID and row["Creditor_Id"] != CURRENT_USER_ID
+        if row["Debtor_Id"] == user_id and row["Creditor_Id"] != user_id
     )
     summary["Owed_To_You"] = sum(
         Decimal(row["Remaining_Balance"])
         for row in raw_balances
-        if row["Creditor_Id"] == CURRENT_USER_ID and row["Debtor_Id"] != CURRENT_USER_ID
+        if row["Creditor_Id"] == user_id and row["Debtor_Id"] != user_id
     )
 
     return render_template(

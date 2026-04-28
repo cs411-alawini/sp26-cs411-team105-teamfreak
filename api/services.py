@@ -1,12 +1,48 @@
 from datetime import date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
-from api.config import CURRENT_USER_ID, SPLIT_TYPE_OPTIONS
-from api.db import execute_many, execute_write
-from api.queries import get_circle_member_ids, get_you_owe_summary, get_current_user
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from api.config import SPLIT_TYPE_OPTIONS
+from api.db import execute_many, execute_write, fetch_one
+from api.queries import get_circle_member_ids, get_current_user, get_you_owe_summary
 
 
-def insert_payment(circle_id, form_data):
+def register_user(name, email, password):
+    existing = fetch_one("SELECT User_Id FROM Users WHERE Email = %s", (email,))
+    if existing:
+        raise ValueError("An account with that email already exists.")
+
+    password_hash = generate_password_hash(password)
+    user_id = execute_write(
+        """
+        INSERT INTO Users (Name, Email, Password_Hash, Date_Joined)
+        VALUES (%s, %s, %s, %s)
+        """,
+        (name, email, password_hash, date.today().isoformat()),
+    )
+    return fetch_one("SELECT User_Id, Name, Email FROM Users WHERE User_Id = %s", (user_id,))
+
+
+def authenticate_user(email, password):
+    user = fetch_one(
+        "SELECT User_Id, Name, Email, Password_Hash FROM Users WHERE Email = %s",
+        (email,),
+    )
+    if not user:
+        return None
+    stored = user["Password_Hash"]
+    # Support werkzeug hashes and plain-text demo passwords
+    try:
+        valid = check_password_hash(stored, password)
+    except Exception:
+        valid = False
+    if not valid:
+        valid = (stored == password)
+    return user if valid else None
+
+
+def insert_payment(circle_id, form_data, user_id):
     receiver_id_raw = form_data.get("receiver_id", "").strip()
     expense_id_raw = form_data.get("expense_id", "").strip()
     amount_raw = form_data.get("amount", "").strip()
@@ -28,7 +64,7 @@ def insert_payment(circle_id, form_data):
 
     eligible_rows = {
         row["expense_id"]: row
-        for row in get_you_owe_summary(circle_id)[1]
+        for row in get_you_owe_summary(circle_id, user_id)[1]
         if row["receiver_id"] == receiver_id
     }
 
@@ -51,7 +87,7 @@ def insert_payment(circle_id, form_data):
         )
         VALUES (%s, %s, %s, %s, %s, %s)
         """,
-        (CURRENT_USER_ID, receiver_id, circle_id, amount, payment_date, description or None),
+        (user_id, receiver_id, circle_id, amount, payment_date, description or None),
     )
 
     execute_write(
@@ -63,18 +99,18 @@ def insert_payment(circle_id, form_data):
     )
 
 
-def insert_expense(form_data):
+def insert_expense(form_data, user_id):
     amount_raw = form_data.get("amount", "").strip()
     circle_id_raw = form_data.get("circle_id", "").strip()
     new_circle_name = form_data.get("new_circle_name", "").strip()
-    user_id_raw = form_data.get("user_id", "").strip()
+    payer_id_raw = form_data.get("user_id", "").strip()
     creation_date = date.today().isoformat()
     split_type = form_data.get("split_type", "").strip()
     description = form_data.get("description", "").strip()
     paid_date = form_data.get("paid_date", "").strip() or None
     new_circle_member_ids_raw = form_data.getlist("new_circle_member_ids")
 
-    if not amount_raw or not user_id_raw or not split_type:
+    if not amount_raw or not payer_id_raw or not split_type:
         raise ValueError("Please fill in all required expense fields.")
 
     if not circle_id_raw:
@@ -95,7 +131,7 @@ def insert_expense(form_data):
         raise ValueError("Amount must be greater than 0.")
 
     try:
-        user_id = int(user_id_raw)
+        payer_id = int(payer_id_raw)
     except ValueError as exc:
         raise ValueError("User selection must be a valid id.") from exc
 
@@ -112,26 +148,26 @@ def insert_expense(form_data):
             raise ValueError("New circle member selection contains an invalid user id.") from exc
 
         selected_new_member_ids = list(dict.fromkeys(selected_new_member_ids))
-        if user_id not in selected_new_member_ids:
-            selected_new_member_ids.append(user_id)
+        if payer_id not in selected_new_member_ids:
+            selected_new_member_ids.append(payer_id)
 
         circle_id = execute_write(
             """
             INSERT INTO Circle (Circle_Name, Creation_Date, Creation_User_Id)
             VALUES (%s, %s, %s)
             """,
-            (new_circle_name, creation_date, user_id),
+            (new_circle_name, creation_date, payer_id),
         )
         circle_member_ids = selected_new_member_ids
 
     if split_type in {"Custom", "Percent"}:
-        participant_ids = [member_id for member_id in circle_member_ids if member_id != user_id]
+        participant_ids = [member_id for member_id in circle_member_ids if member_id != payer_id]
         if not participant_ids:
             if split_type == "Custom":
                 raise ValueError("This circle does not have other members to assign custom amounts to.")
             raise ValueError("This circle does not have other members to assign percentages to.")
     else:
-        participant_ids = [member_id for member_id in circle_member_ids if member_id != user_id]
+        participant_ids = [member_id for member_id in circle_member_ids if member_id != payer_id]
         if not participant_ids:
             raise ValueError("This circle does not have other members to split the expense with.")
 
@@ -152,7 +188,7 @@ def insert_expense(form_data):
         (
             amount,
             circle_id,
-            user_id,
+            payer_id,
             creation_date,
             paid_date,
             "Active",
@@ -177,12 +213,12 @@ def insert_expense(form_data):
     )
 
     if circle_id_raw == "__new__":
-        add_members_to_new_circle(circle_id, user_id, circle_member_ids)
+        add_members_to_new_circle(circle_id, payer_id, circle_member_ids)
 
     return circle_id
 
 
-def insert_circle(form_data):
+def insert_circle(form_data, user_id):
     circle_name = form_data.get("circle_name", "").strip()
     creation_date = date.today().isoformat()
     member_ids_raw = form_data.getlist("member_ids")
@@ -190,26 +226,24 @@ def insert_circle(form_data):
     if not circle_name:
         raise ValueError("Please fill in all required circle fields.")
 
-    creator_id = CURRENT_USER_ID
-
     try:
         member_ids = [int(member_id) for member_id in member_ids_raw]
     except ValueError as exc:
         raise ValueError("Member selection contains an invalid user id.") from exc
 
     member_ids = list(dict.fromkeys(member_ids))
-    if creator_id not in member_ids:
-        member_ids.append(creator_id)
+    if user_id not in member_ids:
+        member_ids.append(user_id)
 
     circle_id = execute_write(
         """
         INSERT INTO Circle (Circle_Name, Creation_Date, Creation_User_Id)
         VALUES (%s, %s, %s)
         """,
-        (circle_name, creation_date, creator_id),
+        (circle_name, creation_date, user_id),
     )
 
-    add_members_to_new_circle(circle_id, creator_id, member_ids)
+    add_members_to_new_circle(circle_id, user_id, member_ids)
     return circle_id
 
 
@@ -302,20 +336,25 @@ def add_members_to_new_circle(circle_id, creator_id, participant_ids):
     )
 
 
-def update_user(form_data):
+def update_user(form_data, user_id):
     name = form_data.get("name", "").strip()
     email = form_data.get("email", "").strip()
-    password_hash = form_data.get("password_hash", "").strip()
+    new_password = form_data.get("new_password", "").strip()
 
     if not name or not email:
         raise ValueError("Name and email are required.")
 
-    current = get_current_user()
+    current = get_current_user(user_id)
+    if new_password:
+        password_hash = generate_password_hash(new_password)
+    else:
+        password_hash = current["Password_Hash"]
+
     execute_write(
         """
         UPDATE Users
         SET Name = %s, Email = %s, Password_Hash = %s
         WHERE User_Id = %s
         """,
-        (name, email, password_hash or current["Password_Hash"], CURRENT_USER_ID),
+        (name, email, password_hash, user_id),
     )
