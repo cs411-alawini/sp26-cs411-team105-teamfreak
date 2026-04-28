@@ -98,6 +98,45 @@ def insert_payment(circle_id, form_data, user_id):
         (expense_id, payment_id),
     )
 
+    _update_rank(user_id, expense_id)
+
+
+def _update_rank(user_id, expense_id):
+    expense = fetch_one(
+        "SELECT Creation_Date FROM Expense WHERE Expense_Id = %s",
+        (expense_id,),
+    )
+    split = fetch_one(
+        "SELECT Amount_Owed FROM Expense_Split WHERE Expense_Id = %s AND User_Id = %s",
+        (expense_id, user_id),
+    )
+    user = fetch_one(
+        "SELECT Rank FROM Users WHERE User_Id = %s",
+        (user_id,),
+    )
+
+    if not expense or not split or not user:
+        return
+
+    amount_owed = Decimal(split["Amount_Owed"])
+    allowed_days = max(1.0, float(amount_owed) / 10.0)
+
+    creation_date = expense["Creation_Date"]
+    days_taken = (date.today() - creation_date).days
+
+    # positive = paid early, 0 = on time, negative = paid late
+    days_diff = allowed_days - days_taken
+    ratio = days_diff / allowed_days
+    delta = max(-10, min(10, round(ratio * 10)))
+
+    current_rank = int(user["Rank"])
+    new_rank = max(1, min(100, current_rank + delta))
+
+    execute_write(
+        "UPDATE Users SET Rank = %s WHERE User_Id = %s",
+        (new_rank, user_id),
+    )
+
 
 def insert_expense(form_data, user_id):
     amount_raw = form_data.get("amount", "").strip()
@@ -358,3 +397,15 @@ def update_user(form_data, user_id):
         """,
         (name, email, password_hash, user_id),
     )
+
+def calculate_ranking_change(form_data, user_id):
+    amount_raw = form_data.get("amount", "").strip()
+    circle_id_raw = form_data.get("circle_id", "").strip()
+    new_circle_name = form_data.get("new_circle_name", "").strip()
+    payer_id_raw = form_data.get("user_id", "").strip()
+    creation_date = date.today().isoformat()
+    split_type = form_data.get("split_type", "").strip()
+    description = form_data.get("description", "").strip()
+    paid_date = form_data.get("paid_date", "").strip() or None
+
+    

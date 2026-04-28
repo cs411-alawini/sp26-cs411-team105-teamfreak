@@ -110,13 +110,39 @@
         {% if members %}
             <div class="list-rows">
                 {% for member in members %}
+                    {% set rank = member.Rank | int %}
+                    {% if rank >= 86 %}
+                        {% set rank_color = "#b8860b" %}
+                        {% set rank_bg = "#fff8e1" %}
+                    {% elif rank >= 61 %}
+                        {% set rank_color = "#165937" %}
+                        {% set rank_bg = "#e5f8ee" %}
+                    {% elif rank >= 31 %}
+                        {% set rank_color = "#c85e0c" %}
+                        {% set rank_bg = "#ffe1c6" %}
+                    {% else %}
+                        {% set rank_color = "#8a2d1d" %}
+                        {% set rank_bg = "#ffe7e1" %}
+                    {% endif %}
                     <div class="list-row">
                         <div class="row-between">
                             <div>
                                 <strong>{{ member.Name }}</strong>
                                 <div class="tiny">{{ member.Email }}</div>
                             </div>
-                            <span class="tag">{{ member.Status }}</span>
+                            <div style="display:flex; align-items:center; gap:0.4rem;">
+                                <span style="
+                                    background: {{ rank_bg }};
+                                    color: {{ rank_color }};
+                                    font-size: 0.78rem;
+                                    font-weight: 800;
+                                    padding: 0.25rem 0.55rem;
+                                    border-radius: 999px;
+                                    letter-spacing: 0.02em;
+                                    white-space: nowrap;
+                                ">&#9733; {{ rank }}</span>
+                                <span class="tag">{{ member.Status }}</span>
+                            </div>
                         </div>
                         <div class="tiny">Role: {{ member.Role }}{% if member.Date_Joined %} | Joined: {{ member.Date_Joined }}{% endif %}</div>
                     </div>

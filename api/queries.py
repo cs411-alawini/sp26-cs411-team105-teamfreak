@@ -361,6 +361,7 @@ def get_circle_detail(circle_id, user_id):
             cm.User_Id,
             u.Name,
             u.Email,
+            u.Rank,
             cm.Role,
             cm.Status,
             cm.Date_Joined
