@@ -4,7 +4,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from mysql.connector import Error
 
 from api.config import MAIN_TABS, SPLIT_TYPE_OPTIONS
-from api.queries import fetch_lookup_data, get_circle_participant_choices
+from api.queries import fetch_lookup_data, get_circle_participant_choices, get_expense_detail_proc
 from api.services import insert_expense
 from routes.auth import login_required
 
@@ -46,4 +46,33 @@ def new_expense():
         split_type_options=SPLIT_TYPE_OPTIONS,
         active_main="new_expense",
         active_main_label=next((tab["label"] for tab in MAIN_TABS if tab["key"] == "new_expense"), "New Expense"),
+    )
+
+
+@bp.route("/expenses/<int:expense_id>/review")
+@login_required
+def expense_review(expense_id):
+    try:
+        expense, splits, payments = get_expense_detail_proc(expense_id)
+    except Error as exc:
+        flash(f"Database error loading expense: {exc}", "error")
+        expense, splits, payments = None, [], []
+
+    if not expense:
+        flash("Expense not found.", "error")
+        return redirect(url_for("dashboard.dashboard"))
+
+    return render_template(
+        "expenses/review.html",
+        title=f"Expense #{expense_id} Review",
+        expense=expense,
+        splits=splits,
+        payments=payments,
+        active_main="dashboard",
+        active_main_label=next((tab["label"] for tab in MAIN_TABS if tab["key"] == "dashboard"), "Dashboard"),
+        subtabs=[
+            {"key": "back", "label": "Back to Circle", "href": url_for("circles.circle_detail", circle_id=expense["Circle_Id"])},
+            {"key": "review", "label": "Expense Review", "href": url_for("expenses.expense_review", expense_id=expense_id)},
+        ],
+        active_subtab="review",
     )

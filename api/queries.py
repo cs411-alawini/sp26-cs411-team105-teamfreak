@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from api.db import fetch_all, fetch_one
+from api.db import call_procedure, fetch_all, fetch_one
 
 
 def format_money(value):
@@ -458,6 +458,14 @@ def get_circle_detail(circle_id, user_id):
         "payments": payments,
         "summary": summary or {},
     }
+
+
+def get_expense_detail_proc(expense_id):
+    results = call_procedure("GetExpenseDetail", (expense_id,))
+    expense  = results[0][0] if results[0] else None
+    splits   = results[1] if len(results) > 1 else []
+    payments = results[2] if len(results) > 2 else []
+    return expense, splits, payments
 
 
 def get_recent_payment_links():

@@ -53,6 +53,23 @@ def execute_write(query, params=None):
         connection.close()
 
 
+def call_procedure(name, params=None):
+    connection = get_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        placeholders = ", ".join(["%s"] * len(params or []))
+        cursor.execute(f"CALL {name}({placeholders})", params or ())
+        results = []
+        while True:
+            results.append(cursor.fetchall())
+            if not cursor.nextset():
+                break
+        return results
+    finally:
+        cursor.close()
+        connection.close()
+
+
 def execute_many(query, params_list):
     connection = get_connection()
     cursor = connection.cursor()
