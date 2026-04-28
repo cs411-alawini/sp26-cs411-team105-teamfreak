@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="form-card">
+        <h2>Create New Circle</h2>
+        <p>This is the top-level group creation flow that lives off the Dashboard.</p>
+        <form method="post">
+            <label>
+                Circle Name *
+                <input type="text" name="circle_name" placeholder="Roommates, Spring Break, Trip Fund..." required>
+            </label>
+            <section class="table-card">
+                <h2>Choose Circle Members</h2>
+                <p>Search and select the users who should belong to this circle.</p>
+                <label>
+                    Search users
+                    <input type="text" id="circle-member-search" placeholder="Search by name or email">
+                </label>
+                <div class="list-rows scroll-panel" id="circle-members-list">
+                    {% for user in users %}
+                        <label class="list-row circle-member-row" data-search="{{ (user.Name ~ ' ' ~ user.Email)|lower }}">
+                            <div class="row-between">
+                                <div>
+                                    <strong>{{ user.Name }}</strong>
+                                    <div class="tiny">{{ user.Email }}</div>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    name="member_ids"
+                                    value="{{ user.User_Id }}"
+                                    {% if user.User_Id == current_user_id %}checked disabled{% endif %}
+                                >
+                            </div>
+                            {% if user.User_Id == current_user_id %}
+                                <div class="tiny" style="margin-top: 0.5rem;">The creator is automatically included in the new circle.</div>
+                            {% endif %}
+                        </label>
+                    {% endfor %}
+                </div>
+            </section>
+            <div class="button-row">
+                <button class="button primary" type="submit">Create Circle</button>
+                <a class="button secondary" href="{{ url_for('dashboard.dashboard') }}">Back to Dashboard</a>
+            </div>
+        </form>
+        <script>
+            const memberSearch = document.getElementById('circle-member-search');
+            const memberRows = Array.from(document.querySelectorAll('.circle-member-row'));
+            const memberCheckboxes = Array.from(document.querySelectorAll('input[name="member_ids"]'));
+
+            function filterMembers() {
+                const term = (memberSearch.value || "").trim().toLowerCase();
+                memberRows.forEach((row) => {
+                    row.style.display = !term || row.dataset.search.includes(term) ? "grid" : "none";
+                });
+            }
+
+            function syncCreatorMembership() {
+                memberCheckboxes.forEach((checkbox) => {
+                    const isCreator = checkbox.value === "{{ current_user_id }}";
+                    checkbox.disabled = isCreator;
+                    if (isCreator) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
+
+            memberSearch.addEventListener("input", filterMembers);
+            syncCreatorMembership();
+            filterMembers();
+        </script>
+    </section>
+{% endblock %}

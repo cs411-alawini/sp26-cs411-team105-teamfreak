@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="form-card">
+        <h2>Log New Expense</h2>
+        <p>
+            This left tab is dedicated to creating a new expense. You can assign it to an
+            existing circle or create a new circle inline.
+        </p>
+        <form method="post">
+            <label>
+                Amount *
+                <input type="number" name="amount" step="0.01" min="0.01" placeholder="49.99" required>
+            </label>
+            <label>
+                Circle *
+                <select name="circle_id">
+                    <option value="">Select a circle</option>
+                    <option value="__new__" {% if preselected_circle_id == "__new__" %}selected{% endif %}>Create a new circle</option>
+                    {% for circle in circles %}
+                        <option value="{{ circle.Circle_Id }}" {% if preselected_circle_id|string == circle.Circle_Id|string %}selected{% endif %}>
+                            {{ circle.Circle_Name }} (ID {{ circle.Circle_Id }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label id="new-circle-field" style="display: none;">
+                New Circle Name
+                <input type="text" name="new_circle_name" placeholder="Only needed when creating a new circle">
+            </label>
+            <section id="new-circle-members-section" class="table-card" style="display: none;">
+                <h2>Choose Circle Members</h2>
+                <p>Search and select the users who should belong to this new circle.</p>
+                <label>
+                    Search users
+                    <input type="text" id="new-circle-member-search" placeholder="Search by name or email">
+                </label>
+                <div class="list-rows scroll-panel" id="new-circle-members-list">
+                    {% for user in users %}
+                        <label class="list-row new-circle-member-row" data-search="{{ (user.Name ~ ' ' ~ user.Email)|lower }}">
+                            <div class="row-between">
+                                <div>
+                                    <strong>{{ user.Name }}</strong>
+                                    <div class="tiny">{{ user.Email }}</div>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    name="new_circle_member_ids"
+                                    value="{{ user.User_Id }}"
+                                    {% if user.User_Id == current_user_id %}checked disabled{% endif %}
+                                >
+                            </div>
+                            {% if user.User_Id == current_user_id %}
+                                <div class="tiny" style="margin-top: 0.5rem;">The payer is automatically included as a member of the new circle.</div>
+                            {% endif %}
+                        </label>
+                    {% endfor %}
+                </div>
+            </section>
+            <label>
+                Who Paid? *
+                <select name="user_id" required></select>
+            </label>
+            <label>
+                Original Purchase Date
+                <input type="date" name="paid_date" value="{{ today_str }}">
+            </label>
+            <label>
+                Split Type *
+                <select name="split_type" required>
+                    {% for split_type in split_type_options %}
+                        <option value="{{ split_type }}">{{ split_type }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <section id="custom-split-section" class="table-card" style="display: none;">
+                <h2 id="split-detail-title">Custom Split</h2>
+                <p>
+                    Select the people who owe you and enter either exact dollar amounts or percentages,
+                    depending on the chosen split type.
+                </p>
+                <div id="custom-split-empty" class="empty" style="display: none;">
+                    Choose a circle first. Split assignment needs a circle so we know who can be assigned.
+                </div>
+                <div id="custom-split-list" class="list-rows scroll-panel"></div>
+            </section>
+            <label>
+                Description
+                <textarea name="description" placeholder="Dinner, groceries, concert tickets..."></textarea>
+            </label>
+            <div class="button-row">
+                <button class="button primary" type="submit">Create Expense</button>
+            </div>
+        </form>
+        <script>
+            const circleSelect = document.querySelector('select[name="circle_id"]');
+            const newCircleField = document.getElementById('new-circle-field');
+            const newCircleMembersSection = document.getElementById('new-circle-members-section');
+            const newCircleMemberSearch = document.getElementById('new-circle-member-search');
+            const newCircleMemberRows = Array.from(document.querySelectorAll('.new-circle-member-row'));
+            const newCircleMemberCheckboxes = Array.from(document.querySelectorAll('input[name="new_circle_member_ids"]'));
+            const splitTypeSelect = document.querySelector('select[name="split_type"]');
+            const payerSelect = document.querySelector('select[name="user_id"]');
+            const customSplitSection = document.getElementById('custom-split-section');
+            const splitDetailTitle = document.getElementById('split-detail-title');
+            const customSplitList = document.getElementById('custom-split-list');
+            const customSplitEmpty = document.getElementById('custom-split-empty');
+            const circleParticipantChoices = {{ circle_participant_choices|tojson }};
+            const allUsers = {{ users|tojson }};
+            const currentUserId = "{{ current_user_id }}";
+            let preferredPayerId = currentUserId;
+
+            function syncCircleMode() {
+                const isNewCircle = circleSelect.value === "__new__";
+                newCircleField.style.display = isNewCircle ? "grid" : "none";
+                newCircleMembersSection.style.display = isNewCircle ? "block" : "none";
+                renderPayerOptions();
+                syncNewCirclePayer();
+            }
+
+            function syncNewCirclePayer() {
+                const isNewCircle = circleSelect.value === "__new__";
+                newCircleMemberCheckboxes.forEach((checkbox) => {
+                    const isPayer = checkbox.value === payerSelect.value;
+                    checkbox.disabled = isNewCircle && isPayer;
+                    if (isPayer) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
+
+            function getSelectedNewCircleMembers() {
+                return newCircleMemberCheckboxes
+                    .filter((checkbox) => checkbox.checked)
+                    .map((checkbox) => {
+                        const row = checkbox.closest('.new-circle-member-row');
+                        const name = row.querySelector('strong')?.textContent || "";
+                        const email = row.querySelector('.tiny')?.textContent || "";
+                        return { User_Id: checkbox.value, Name: name, Email: email };
+                    });
+            }
+
+            function renderPayerOptions() {
+                const selectedCircle = circleSelect.value;
+                const isNewCircle = selectedCircle === "__new__";
+                const payerCandidates = isNewCircle
+                    ? getSelectedNewCircleMembers()
+                    : (circleParticipantChoices[selectedCircle] || []);
+
+                payerSelect.innerHTML = "";
+
+                if (!selectedCircle || payerCandidates.length === 0) {
+                    payerSelect.innerHTML = '<option value="">Select a circle first</option>';
+                    return;
+                }
+
+                payerCandidates.forEach((user) => {
+                    const option = document.createElement("option");
+                    option.value = user.User_Id;
+                    option.textContent = `${user.Name} (ID ${user.User_Id})`;
+                    payerSelect.appendChild(option);
+                });
+
+                const validPreferred = payerCandidates.some((user) => String(user.User_Id) === String(preferredPayerId));
+                payerSelect.value = validPreferred ? preferredPayerId : String(payerCandidates[0].User_Id);
+                preferredPayerId = payerSelect.value;
+            }
+
+            function filterNewCircleMembers() {
+                const term = (newCircleMemberSearch.value || "").trim().toLowerCase();
+                newCircleMemberRows.forEach((row) => {
+                    row.style.display = !term || row.dataset.search.includes(term) ? "grid" : "none";
+                });
+            }
+
+            function renderCustomSplit() {
+                const splitMode = splitTypeSelect.value;
+                const showAssignedSplit = splitMode === "Custom" || splitMode === "Percent";
+                customSplitSection.style.display = showAssignedSplit ? "block" : "none";
+                if (!showAssignedSplit) {
+                    customSplitList.innerHTML = "";
+                    return;
+                }
+
+                splitDetailTitle.textContent = splitMode === "Percent" ? "Percent Split" : "Custom Split";
+
+                const selectedCircle = circleSelect.value;
+                const payerId = payerSelect.value;
+                const members = selectedCircle === "__new__"
+                    ? getSelectedNewCircleMembers()
+                    : (circleParticipantChoices[selectedCircle] || []);
+
+                if (!selectedCircle || members.length === 0) {
+                    customSplitEmpty.style.display = "block";
+                    customSplitList.innerHTML = "";
+                    return;
+                }
+
+                customSplitEmpty.style.display = "none";
+                customSplitList.innerHTML = members
+                    .filter((member) => String(member.User_Id) !== payerId)
+                    .map((member) => `
+                        <label class="list-row">
+                            <div class="row-between">
+                                <div>
+                                    <strong>${member.Name}</strong>
+                                    <div class="tiny">${member.Email}</div>
+                                </div>
+                                <span class="tag">Included</span>
+                            </div>
+                            <div class="tiny" style="margin-top: 0.7rem;">
+                                <label>
+                                    ${splitMode === "Percent" ? `Percent owed by ${member.Name}` : `Amount owed by ${member.Name}`}
+                                    <input
+                                        type="number"
+                                        name="${splitMode === "Percent" ? `percent_owed_${member.User_Id}` : `custom_owed_${member.User_Id}`}"
+                                        step="0.01"
+                                        min="0"
+                                        ${splitMode === "Percent" ? `max="100"` : ""}
+                                        placeholder="${splitMode === "Percent" ? '0.00%' : '0.00'}"
+                                    >
+                                </label>
+                            </div>
+                        </label>
+                    `)
+                    .join("");
+            }
+
+            circleSelect.addEventListener("change", syncCircleMode);
+            circleSelect.addEventListener("change", renderCustomSplit);
+            splitTypeSelect.addEventListener("change", renderCustomSplit);
+            payerSelect.addEventListener("change", () => {
+                preferredPayerId = payerSelect.value;
+                syncNewCirclePayer();
+                renderCustomSplit();
+            });
+            newCircleMemberSearch.addEventListener("input", filterNewCircleMembers);
+            newCircleMemberCheckboxes.forEach((checkbox) =>
+                checkbox.addEventListener("change", () => {
+                    renderPayerOptions();
+                    syncNewCirclePayer();
+                    renderCustomSplit();
+                })
+            );
+            syncCircleMode();
+            filterNewCircleMembers();
+            renderCustomSplit();
+        </script>
+    </section>
+{% endblock %}

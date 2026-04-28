@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="table-card">
+        <h2>Expense Overview</h2>
+        <div class="list-rows">
+            <div class="list-row">
+                <strong>Circle</strong>
+                <div class="tiny">{{ expense.Circle_Name }}</div>
+            </div>
+            <div class="list-row">
+                <strong>Created By</strong>
+                <div class="tiny">{{ expense.Created_By }} ({{ expense.Creator_Email }})</div>
+            </div>
+            <div class="list-row">
+                <strong>Amount</strong>
+                <div class="tiny">${{ expense.Amount | money }}</div>
+            </div>
+            <div class="list-row">
+                <strong>Split Type</strong>
+                <div class="tiny">{{ expense.Split_Type }}</div>
+            </div>
+            <div class="list-row">
+                <strong>Status</strong>
+                <div class="tiny">{{ expense.Status }}</div>
+            </div>
+            <div class="list-row">
+                <strong>Created On</strong>
+                <div class="tiny">{{ expense.Creation_Date }}</div>
+            </div>
+            {% if expense.Paid_Date %}
+            <div class="list-row">
+                <strong>Paid On</strong>
+                <div class="tiny">{{ expense.Paid_Date }}</div>
+            </div>
+            {% endif %}
+            {% if expense.Description %}
+            <div class="list-row">
+                <strong>Description</strong>
+                <div class="tiny">{{ expense.Description }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="table-card">
+        <h2>Split Breakdown</h2>
+        {% if splits %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Email</th>
+                            <th>Amount Owed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in splits %}
+                            <tr>
+                                <td>{{ row.User_Name }}</td>
+                                <td>{{ row.Email }}</td>
+                                <td>${{ row.Amount_Owed | money }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty">No split data found for this expense.</div>
+        {% endif %}
+    </section>
+
+    <section class="table-card">
+        <h2>Payments Made</h2>
+        {% if payments %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in payments %}
+                            <tr>
+                                <td>{{ p.Sender_Name }}</td>
+                                <td>{{ p.Receiver_Name }}</td>
+                                <td>${{ p.Amount | money }}</td>
+                                <td>{{ p.Payment_Date }}</td>
+                                <td>{{ p.Description or "—" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty">No payments have been made toward this expense yet.</div>
+        {% endif %}
+    </section>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+    {% if user %}
+        <section class="stats-grid">
+            <article class="stat-box">
+                <span class="value">{{ summary.Active_Circles or 0 }}</span>
+                <span class="label">Active Circles</span>
+            </article>
+            <article class="stat-box">
+                <span class="value">${{ summary.Total_You_Owe | money }}</span>
+                <span class="label">You Owe</span>
+            </article>
+            <article class="stat-box">
+                <span class="value">${{ owed_to_user.Owed_To_You | money }}</span>
+                <span class="label">Owed To You</span>
+            </article>
+            <article class="stat-box">
+                <span class="value">{{ user.Date_Joined }}</span>
+                <span class="label">Joined</span>
+            </article>
+        </section>
+
+    {% else %}
+        <div class="empty">The current user could not be loaded.</div>
+    {% endif %}
+{% endblock %}
