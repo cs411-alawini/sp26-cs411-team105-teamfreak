@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 import mysql.connector
 from mysql.connector import Error
 
@@ -6,6 +8,21 @@ from api.config import DB_CONFIG
 
 def get_connection():
     return mysql.connector.connect(**DB_CONFIG)
+
+
+@contextmanager
+def transaction():
+    connection = get_connection()
+    cursor = connection.cursor()
+    try:
+        yield cursor
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+        connection.close()
 
 
 def fetch_all(query, params=None):

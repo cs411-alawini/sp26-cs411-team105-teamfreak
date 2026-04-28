@@ -4,7 +4,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from api.config import SPLIT_TYPE_OPTIONS
-from api.db import execute_many, execute_write, fetch_one
+from api.db import execute_many, execute_write, fetch_one, transaction
 from api.queries import get_circle_balance_rows, get_circle_member_ids, get_current_user, get_you_owe_summary
 
 
@@ -75,53 +75,49 @@ def insert_payment(circle_id, form_data, user_id):
     if amount > remaining_balance:
         raise ValueError("Payment amount cannot exceed the remaining amount you owe on that expense.")
 
-    payment_id = execute_write(
-        """
-        INSERT INTO Payments (
-            Sender_Id,
-            Receiver_Id,
-            Circle_Id,
-            Amount,
-            Payment_Date,
-            Description
+    with transaction() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO Payments (
+                Sender_Id, Receiver_Id, Circle_Id, Amount, Payment_Date, Description
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (user_id, receiver_id, circle_id, amount, payment_date, description or None),
         )
-        VALUES (%s, %s, %s, %s, %s, %s)
-        """,
-        (user_id, receiver_id, circle_id, amount, payment_date, description or None),
-    )
+        payment_id = cursor.lastrowid
+        cursor.execute(
+            "INSERT INTO Expense_Payment (Expense_Id, Payment_Id) VALUES (%s, %s)",
+            (expense_id, payment_id),
+        )
 
-    execute_write(
-        """
-        INSERT INTO Expense_Payment (Expense_Id, Payment_Id)
-        VALUES (%s, %s)
-        """,
-        (expense_id, payment_id),
-    )
 
 def settle_all(circle_id):
     balances = get_circle_balance_rows(circle_id)
     payment_date = date.today().isoformat()
 
-    for row in balances:
-        remaining = row["Remaining_Balance"]
-        if remaining <= 0:
-            continue
+    with transaction() as cursor:
+        for row in balances:
+            remaining = row["Remaining_Balance"]
+            if remaining <= 0:
+                continue
 
-        debtor_id = row["Debtor_Id"]
-        creditor_id = row["Creditor_Id"]
-        expense_id = row["Expense_Id"]
+            debtor_id = row["Debtor_Id"]
+            creditor_id = row["Creditor_Id"]
+            expense_id = row["Expense_Id"]
 
-        payment_id = execute_write(
-            """
-            INSERT INTO Payments (Sender_Id, Receiver_Id, Circle_Id, Amount, Payment_Date, Description)
-            VALUES (%s, %s, %s, %s, %s, 'Settled via Settle All')
-            """,
-            (debtor_id, creditor_id, circle_id, remaining, payment_date),
-        )
-        execute_write(
-            "INSERT INTO Expense_Payment (Expense_Id, Payment_Id) VALUES (%s, %s)",
-            (expense_id, payment_id),
-        )
+            cursor.execute(
+                """
+                INSERT INTO Payments (Sender_Id, Receiver_Id, Circle_Id, Amount, Payment_Date, Description)
+                VALUES (%s, %s, %s, %s, %s, 'Settled via Settle All')
+                """,
+                (debtor_id, creditor_id, circle_id, remaining, payment_date),
+            )
+            payment_id = cursor.lastrowid
+            cursor.execute(
+                "INSERT INTO Expense_Payment (Expense_Id, Payment_Id) VALUES (%s, %s)",
+                (expense_id, payment_id),
+            )
 
 
 def insert_expense(form_data, user_id):
