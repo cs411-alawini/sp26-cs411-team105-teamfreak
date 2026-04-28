@@ -5,7 +5,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from api.config import SPLIT_TYPE_OPTIONS
 from api.db import execute_many, execute_write, fetch_one
-from api.queries import get_circle_member_ids, get_current_user, get_you_owe_summary
+from api.queries import get_circle_balance_rows, get_circle_member_ids, get_current_user, get_you_owe_summary
 
 
 def register_user(name, email, password):
@@ -111,7 +111,7 @@ def _update_rank(user_id, expense_id):
         (expense_id, user_id),
     )
     user = fetch_one(
-        "SELECT Rank FROM Users WHERE User_Id = %s",
+        "SELECT `Rank` FROM Users WHERE User_Id = %s",
         (user_id,),
     )
 
@@ -133,9 +133,36 @@ def _update_rank(user_id, expense_id):
     new_rank = max(1, min(100, current_rank + delta))
 
     execute_write(
-        "UPDATE Users SET Rank = %s WHERE User_Id = %s",
+        "UPDATE Users SET `Rank` = %s WHERE User_Id = %s",
         (new_rank, user_id),
     )
+
+
+def settle_all(circle_id):
+    balances = get_circle_balance_rows(circle_id)
+    payment_date = date.today().isoformat()
+
+    for row in balances:
+        remaining = row["Remaining_Balance"]
+        if remaining <= 0:
+            continue
+
+        debtor_id = row["Debtor_Id"]
+        creditor_id = row["Creditor_Id"]
+        expense_id = row["Expense_Id"]
+
+        payment_id = execute_write(
+            """
+            INSERT INTO Payments (Sender_Id, Receiver_Id, Circle_Id, Amount, Payment_Date, Description)
+            VALUES (%s, %s, %s, %s, %s, 'Settled via Settle All')
+            """,
+            (debtor_id, creditor_id, circle_id, remaining, payment_date),
+        )
+        execute_write(
+            "INSERT INTO Expense_Payment (Expense_Id, Payment_Id) VALUES (%s, %s)",
+            (expense_id, payment_id),
+        )
+        _update_rank(debtor_id, expense_id)
 
 
 def insert_expense(form_data, user_id):
@@ -397,15 +424,3 @@ def update_user(form_data, user_id):
         """,
         (name, email, password_hash, user_id),
     )
-
-def calculate_ranking_change(form_data, user_id):
-    amount_raw = form_data.get("amount", "").strip()
-    circle_id_raw = form_data.get("circle_id", "").strip()
-    new_circle_name = form_data.get("new_circle_name", "").strip()
-    payer_id_raw = form_data.get("user_id", "").strip()
-    creation_date = date.today().isoformat()
-    split_type = form_data.get("split_type", "").strip()
-    description = form_data.get("description", "").strip()
-    paid_date = form_data.get("paid_date", "").strip() or None
-
-    

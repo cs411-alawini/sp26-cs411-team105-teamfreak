@@ -10,7 +10,7 @@ from api.queries import (
     get_circle_detail,
     get_you_owe_summary,
 )
-from api.services import insert_circle, insert_payment
+from api.services import insert_circle, insert_payment, settle_all
 from routes.auth import login_required
 
 bp = Blueprint("circles", __name__)
@@ -112,3 +112,15 @@ def circle_detail(circle_id):
         ],
         active_subtab="detail",
     )
+
+
+@bp.route("/circles/<int:circle_id>/settle-all", methods=["POST"])
+@login_required
+def settle_all_circle(circle_id):
+    try:
+        settle_all(circle_id)
+    except Error as exc:
+        flash(f"Could not settle all balances: {exc}", "error")
+    else:
+        flash("All outstanding balances have been settled.", "success")
+    return redirect(url_for("circles.circle_detail", circle_id=circle_id))
