@@ -84,7 +84,7 @@ Overdue detection and notifications would also help. We could add Due Data back 
 
 Recurring expenses (like monthly rent splits) would make the app more useful for ongoing shared living situations. But that isn’t as necessary as the former features and would be implemented later. 
 
-##Division of labor and teamwork 
+## Division of labor and teamwork 
 
 Our team was Logan Alt, Nathan Hwang, Charlie Niewiarowski, and Eric Yang. 
 
