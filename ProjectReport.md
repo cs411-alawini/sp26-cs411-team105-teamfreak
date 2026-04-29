@@ -1,6 +1,6 @@
 # CS 411 Final Project Report: Team 105 (TeamFreak) 
 
-##Changes from the original proposal 
+## Changes from the original proposal 
 
 Our original Stage 1 proposal had a few ideas that we ended up either scaling back or removing. The biggest one was the debt approval system. In the proposal, we said that debts would "only become active once both parties give approval," like a two-way handshake before any balance showed up. We ended up dropping this. It added a lot of complexity and didn't feel necessary for a friend group expense tracker where people generally trust each other. Instead, when someone logs an expense with a split, it just goes live immediately. 
 
